@@ -8,7 +8,7 @@ function App() {
  }, []);
  return (
  <div style={{padding:40}}>
- <h1>React Frontend Running</h1>
+ <h1>Reacted haha to your msg Running</h1>
  <h2>Backend says: {message}</h2>
  </div>
 );
