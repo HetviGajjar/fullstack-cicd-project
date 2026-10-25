@@ -28,14 +28,14 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+          tags: hetvigajjar/frontend:latest
 
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/backend:latest
+          tags: hetvigajjar/backend:latest
 
       - name: Copy Docker Compose and Nginx Config to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -59,14 +59,33 @@ jobs:
           script: |
             set -eu
 
-            mkdir -p /home/ubuntu/app
             cd /home/ubuntu/app
 
+            echo "Checking Compose file received by EC2..."
+            cat docker-compose.yml
+
+            echo "Checking image names..."
+            docker compose -f /home/ubuntu/app/docker-compose.yml config --images
+
+            if grep -q 'YOUR_DOCKERHUB_USERNAME' docker-compose.yml; then
+              echo "ERROR: Old placeholder found in Compose file!"
+              exit 1
+            fi
+
+            echo "Logging into Docker Hub..."
             echo "$DOCKER_PASSWORD" | docker login \
               --username "$DOCKER_USERNAME" \
               --password-stdin
 
-            docker compose pull
-            docker compose up -d --remove-orphans
+            echo "Pulling images..."
+            docker compose -f /home/ubuntu/app/docker-compose.yml pull
+
+            echo "Starting containers..."
+            docker compose -f /home/ubuntu/app/docker-compose.yml up -d --remove-orphans
+
+            echo "Checking container status..."
+            docker compose -f /home/ubuntu/app/docker-compose.yml ps
 
             docker image prune -f
+
+            echo "Deployment completed successfully!"
